@@ -10,8 +10,10 @@ Expected features/roadmap:
 
 1. Ask Alexa when NA LCS teams play for 2018 Summer Split only. Uses LoL eSports API. Times in PDT only. DONE
 2. Speed up the response by storing the match info for each team's next four matches in S3 bucket. DONE
-3. Ask Alexa when EU LCS teams play for 2018 Summer Split only. Uses S3 bucket. Times in PDT only.
-4. Have Alexa give match time in local time zone.
-5. Develop Lambda function to pull API data weekly and update S3 bucket data.
-6. Store match data in a database and query as needed.
-7. Ask Alexa when LCK teams play for 2018 Summer Split only. Uses database.
+3. Develop python script to pull API data and update DynamoDB on demand. DONE
+4. Store match data in a database and query as needed. DONE
+5. Develop Lambda function to pull API data weekly and update Dynamo DB.
+6. Ask Alexa when EU LCS teams play for 2018 Summer Split only.
+7. Have Alexa give match time in local time zone.
+8. Ask Alexa when LCK teams play for 2018 Summer Split only. Uses database.
+9. Develop script to create and fill DynamoDB table.

@@ -1,6 +1,6 @@
 import calendar
 import boto3
-import json
+from datetime import datetime
 
 SKILL_NAME = "eSports"
 NA_LCS_TEAMS = ['cloud9', 'team-solomid', 'counter-logic-gaming', 'team-liquid', 'echo-fox', 'flyquest',
@@ -8,9 +8,7 @@ NA_LCS_TEAMS = ['cloud9', 'team-solomid', 'counter-logic-gaming', 'team-liquid',
 EU_LCS_TEAMS = ['fnatic', 'gambit-gaming', 'sk-gaming', 'roccat', 'millenium', 'h2k', 'unicorns-of-love',
                 'copenhagen-wolves', 'giants-gaming', 'fc-schalke-04', 'origen', 'splyce', 'g2-esports', 'vitality',
                 'huma', 'misfits', 'mysterious-monkeys', 'ninjas-in-pyjamas']
-
-s3 = boto3.resource('s3')
-
+DYNAMODB_TABLE_NAME="teams_na-lcs-id"
 
 def lambda_handler(event, context):
     if event["session"]["new"]:
@@ -23,50 +21,46 @@ def lambda_handler(event, context):
     elif event["request"]["type"] == "SessionEndedRequest":
         return on_session_ended(event["request"], event["session"])
 
-
 def on_session_started(session_started_request, session):
     print("Starting new session.")
-
 
 def on_launch(launch_request, session):
     return get_welcome_response()
 
-
 def get_welcome_response():
     speechOutput = "Welcome to the eSports skill. " \
                    "You can ask me for a team's match date by saying, " \
-                   "When does Cloud 9 play next?"
-    reprompt_text = "Please ask me when a team plays next."
+                   "When does Cloud 9 play?"
+    reprompt_text = "Please ask me about a team."
     should_end_session = False
     return response(SKILL_NAME, speechOutput, reprompt_text, should_end_session)
-
 
 def on_intent(request, session):
     intent_name = request['intent']['name']
 
     if intent_name == "getMatchTime":
-        team_name = \
+        team_id = \
             request['intent']['slots']['myTeam']['resolutions']['resolutionsPerAuthority'][0]['values'][0]['value'][
                 'id']
-        return get_match_response(team_name)
+        return get_match_response(team_id)
 
-
-def get_match_response(team_name):
-    bucket = "alexa-esports-times"
-    key = "na-lcs/"+team_name + ".json"
-    content_object = s3.Object(bucket, key)
-
-    file_content = content_object.get()['Body'].read().decode('utf-8')
-    json_content = json.loads(file_content)
-    match_json = json_content['matches'][0]
-    match_day = calendar.day_name[calendar.weekday(match_json['year'], match_json['month'], match_json['date'])]
-    pdtTime = match_json['pdtHour']
-    if pdtTime > 12:
-        pdtTime -= 12
-    speechOutput = team_name + " play " + match_json['opponent'] + " on " + match_day + " " + match_json[
-        'monthName'] + " " + match_json['pdtDate'] + " at " + str(pdtTime) + " P.M."
+def get_match_response(team_id_str):
+    dynamodb = boto3.resource('dynamodb')
+    table = dynamodb.Table(DYNAMODB_TABLE_NAME)
+    team_id = int(team_id_str)
+    DBitemData = table.get_item(Key={"id": team_id})
+    DBteamData = DBitemData['Item']
+    format1 = "%Y-%m-%dT%H:%M:%S.%f"
+    DBdateTime = datetime.strptime(DBteamData['nextMatch'], format1)
+    if DBdateTime.hour < 12:
+        timeHour = DBdateTime.hour
+        dayTime = " A.M."
+    else:
+        dayTime = " P.M."
+        if DBdateTime.hour > 12:
+            timeHour = DBdateTime.hour - 12
+    speechOutput = DBteamData['slug'] + " play on " + calendar.day_name[DBdateTime.weekday()] + ", " + calendar.month_name[DBdateTime.month] + " " + str(DBdateTime.day) + " at " + str(timeHour) + dayTime
     return response(SKILL_NAME, speechOutput, speechOutput, True)
-
 
 def response(title, output, reprompt_text, endsession):
     return {
