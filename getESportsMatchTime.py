@@ -2,13 +2,12 @@ import calendar
 import boto3
 from datetime import datetime
 
-SKILL_NAME = "eSports"
+SKILL_NAME = "N.A.L.C.S."
 NA_LCS_TEAMS = ['cloud9', 'team-solomid', 'counter-logic-gaming', 'team-liquid', 'echo-fox', 'flyquest',
                 'golden-guardians', 'clutch-gaming', '100-thieves', 'optic-gaming']
-EU_LCS_TEAMS = ['fnatic', 'gambit-gaming', 'sk-gaming', 'roccat', 'millenium', 'h2k', 'unicorns-of-love',
-                'copenhagen-wolves', 'giants-gaming', 'fc-schalke-04', 'origen', 'splyce', 'g2-esports', 'vitality',
-                'huma', 'misfits', 'mysterious-monkeys', 'ninjas-in-pyjamas']
 DYNAMODB_TABLE_NAME="teams_na-lcs-id"
+SCHEDULED_TIME_FORMAT = "%Y-%m-%dT%H:%M:%S.%f"
+
 
 def lambda_handler(event, context):
     if event["session"]["new"]:
@@ -28,7 +27,7 @@ def on_launch(launch_request, session):
     return get_welcome_response()
 
 def get_welcome_response():
-    speechOutput = "Welcome to the eSports skill. " \
+    speechOutput = "Welcome to the N.A.L.C.S. skill. " \
                    "You can ask me for a team's match date by saying, " \
                    "When does Cloud 9 play?"
     reprompt_text = "Please ask me about a team."
@@ -39,9 +38,7 @@ def on_intent(request, session):
     intent_name = request['intent']['name']
 
     if intent_name == "getMatchTime":
-        team_id = \
-            request['intent']['slots']['myTeam']['resolutions']['resolutionsPerAuthority'][0]['values'][0]['value'][
-                'id']
+        team_id = request['intent']['slots']['myTeam']['resolutions']['resolutionsPerAuthority'][0]['values'][0]['value']['id']
         return get_match_response(team_id)
 
 def get_match_response(team_id_str):
@@ -50,8 +47,7 @@ def get_match_response(team_id_str):
     team_id = int(team_id_str)
     DBitemData = table.get_item(Key={"id": team_id})
     DBteamData = DBitemData['Item']
-    format1 = "%Y-%m-%dT%H:%M:%S.%f"
-    DBdateTime = datetime.strptime(DBteamData['nextMatch'], format1)
+    DBdateTime = datetime.strptime(DBteamData['nextMatch'], SCHEDULED_TIME_FORMAT)
     if DBdateTime.hour < 12:
         timeHour = DBdateTime.hour
         dayTime = " A.M."
@@ -59,8 +55,11 @@ def get_match_response(team_id_str):
         dayTime = " P.M."
         if DBdateTime.hour > 12:
             timeHour = DBdateTime.hour - 12
-    speechOutput = DBteamData['slug'] + " play on " + calendar.day_name[DBdateTime.weekday()] + ", " + calendar.month_name[DBdateTime.month] + " " + str(DBdateTime.day) + " at " + str(timeHour) + dayTime
+        else:
+            timeHour = 12
+    speechOutput = DBteamData['slug'] + " play on " + calendar.day_name[DBdateTime.weekday()] + ", " + calendar.month_name[DBdateTime.month] + " " + str(DBdateTime.day) + " at " + str(timeHour) + dayTime + " Pacific Time."
     return response(SKILL_NAME, speechOutput, speechOutput, True)
+
 
 def response(title, output, reprompt_text, endsession):
     return {

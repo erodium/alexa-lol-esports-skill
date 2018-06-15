@@ -15,5 +15,6 @@ Expected features/roadmap:
 5. Develop Lambda function to pull API data weekly and update Dynamo DB.
 6. Ask Alexa when EU LCS teams play for 2018 Summer Split only.
 7. Have Alexa give match time in local time zone.
-8. Ask Alexa when LCK teams play for 2018 Summer Split only. Uses database.
+8. Ask Alexa when all region teams play for 2018 summer split only.
 9. Develop script to create and fill DynamoDB table.
+10. Store data for 2018 Summer Split Playoffs.

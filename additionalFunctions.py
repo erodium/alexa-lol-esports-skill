@@ -1,5 +1,7 @@
 
-
+EU_LCS_TEAMS = ['fnatic', 'gambit-gaming', 'sk-gaming', 'roccat', 'millenium', 'h2k', 'unicorns-of-love',
+                'copenhagen-wolves', 'giants-gaming', 'fc-schalke-04', 'origen', 'splyce', 'g2-esports', 'vitality',
+                'huma', 'misfits', 'mysterious-monkeys', 'ninjas-in-pyjamas']
 
 def get_match_response(team_name):
     date_time_string = get_match_datetime_api(team_name)
@@ -44,3 +46,7 @@ def old_get_match_response(team_name):
     speechOutput = team_name + " play " + match_json['opponent'] + " on " + match_day + " " + match_json[
         'monthName'] + " " + match_json['pdtDate'] + " at " + str(pdtTime) + " P.M."
     return response(SKILL_NAME, speechOutput, speechOutput, True)
+
+
+
+
