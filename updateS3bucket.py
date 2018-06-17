@@ -1,11 +1,10 @@
 import boto3
-import json
 from datetime import datetime
 import requests
 import pytz
 from pytz import timezone
 
-NA_TOURN_ID="8531db79-ade3-4294-ae4a-ef639967c393" #should go away when
+NA_TOURN_ID="8531db79-ade3-4294-ae4a-ef639967c393" #should go away when this supports multiple tournaments
 NA_LCS_TEAMS = [
         {"id":18, "slug":"cloud9"},
         {"id":11, "slug":"team-solomid"},
@@ -41,8 +40,13 @@ def lambda_handler(event, context):
         if 'Item' in DBteamData:
             DBupdatedAtTimeStr = DBteamData['Item']['updatedAt']
             if dataHasBeenUpdated(APIupdatedAtTimeStr,DBupdatedAtTimeStr):
+                pdt = timezone('US/Pacific')
+                APInsiDTO = datetime.strptime(APInextScheduledItem['scheduledTime'][:-5], SCHEDULED_TIME_FORMAT)
+                utc_dt = pytz.utc.localize(APInsiDTO)
+                pdt_dt = utc_dt.astimezone(pdt)
+                pdtNSIstr = pdt_dt.strftime(SCHEDULED_TIME_FORMAT)
                 updateExpression = "SET updatedAt = :t, nextMatch = :m"
-                expressionAttributeValue = { ":t": APIupdatedAtTimeStr, ":m": APInextScheduledItem['scheduledTime'][:-5]}
+                expressionAttributeValue = { ":t": APIupdatedAtTimeStr, ":m": pdtNSIstr}
                 table.update_item(Key={"id":team['id']},UpdateExpression=updateExpression,ExpressionAttributeValues=expressionAttributeValue)
         else:
             newItem = ITEM_TEMPLATE.copy()
