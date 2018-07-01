@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://$PROJECT_DIR$/../AWS-python-helpers/.idea/AWS-python-helpers.iml" filepath="$PROJECT_DIR$/../AWS-python-helpers/.idea/AWS-python-helpers.iml" />
+      <module fileurl="file://$PROJECT_DIR$/../OTX/.idea/OTX.iml" filepath="$PROJECT_DIR$/../OTX/.idea/OTX.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/alexa-lol-esports-skill.iml" filepath="$PROJECT_DIR$/.idea/alexa-lol-esports-skill.iml" />
+    </modules>
+  </component>
+</project>
