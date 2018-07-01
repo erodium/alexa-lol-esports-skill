@@ -1,11 +1,12 @@
 import boto3
-import json
 from datetime import datetime
 import requests
 import pytz
 from pytz import timezone
+import logging
 
-NA_TOURN_ID="8531db79-ade3-4294-ae4a-ef639967c393" #should go away when
+logging.basicConfig(level=logging.INFO)
+NA_TOURN_ID="8531db79-ade3-4294-ae4a-ef639967c393" #should go away when this supports multiple tournaments
 NA_LCS_TEAMS = [
         {"id":18, "slug":"cloud9"},
         {"id":11, "slug":"team-solomid"},
@@ -32,19 +33,30 @@ table = dynamodb.Table(DYNAMODB_TABLE_NAME)
 def lambda_handler(event, context):
     overallStatus = 0
     for team in NA_LCS_TEAMS:
+        logging.info("starting %s", team['slug'])
         APIteamData = getTeam(team['slug'], NA_TOURN_ID)
         APInextScheduledItem = APIteamData['scheduleItems'][0]
         APIteams = APIteamData['teams']
         APIcurrentTeam = APIteams[len(APIteams) - 1]
-        APIupdatedAtTimeStr = APIcurrentTeam['updatedAt']
+        APInsiTimeStr = APInextScheduledItem['scheduledTime'][:-5]
         DBteamData = table.get_item(Key={"id":team['id']})
         if 'Item' in DBteamData:
-            DBupdatedAtTimeStr = DBteamData['Item']['updatedAt']
-            if dataHasBeenUpdated(APIupdatedAtTimeStr,DBupdatedAtTimeStr):
-                updateExpression = "SET updatedAt = :t, nextMatch = :m"
-                expressionAttributeValue = { ":t": APIupdatedAtTimeStr, ":m": APInextScheduledItem['scheduledTime'][:-5]}
+            logging.info("item found")
+            DBnextMatchTimeStr = DBteamData['Item']['nextMatch']
+            if dataHasBeenUpdated(APInsiTimeStr,DBnextMatchTimeStr):
+                logging.info("data had been updated")
+                pdt = timezone('US/Pacific')
+                APInsiDTO = datetime.strptime(APInsiTimeStr, SCHEDULED_TIME_FORMAT)
+                utc_dt = pytz.utc.localize(APInsiDTO)
+                pdt_dt = utc_dt.astimezone(pdt)
+                pdtNSIstr = pdt_dt.strftime(SCHEDULED_TIME_FORMAT)
+                updateExpression = "SET nextMatch = :m"
+                expressionAttributeValue = {":m": pdtNSIstr}
                 table.update_item(Key={"id":team['id']},UpdateExpression=updateExpression,ExpressionAttributeValues=expressionAttributeValue)
+            else:
+                logging.info("no changes made")
         else:
+            logging.info("no item found, creating")
             newItem = ITEM_TEMPLATE.copy()
             newItem['id']=APIcurrentTeam['id']
             newItem['updatedAt'] = APIcurrentTeam['updatedAt']
@@ -60,13 +72,15 @@ def lambda_handler(event, context):
 
 
 def dataHasBeenUpdated(APIupdatedAtStr, DBupdatedAtStr):
-    TimeAPIupdated = datetime.strptime(APIupdatedAtStr, UPDATED_AT_FORMAT)
-    TimeDBupdated = datetime.strptime(DBupdatedAtStr, UPDATED_AT_FORMAT)
+    logging.info("checking data")
+    TimeAPIupdated = datetime.strptime(APIupdatedAtStr, SCHEDULED_TIME_FORMAT)
+    TimeDBupdated = datetime.strptime(DBupdatedAtStr, SCHEDULED_TIME_FORMAT)
     if TimeDBupdated < TimeAPIupdated:
         return True
     return False
 
 
 def getTeam(slug, tournamentId):
-	r = requests.get("https://api.lolesports.com/api/v1/teams?slug=" + str(slug) + "&tournament=" + str(tournamentId)).json()
-	return r
+    logging.info("Getting matches for %s in %s", slug, tournamentId)
+    r = requests.get("https://api.lolesports.com/api/v1/teams?slug=" + str(slug) + "&tournament=" + str(tournamentId)).json()
+    return r
