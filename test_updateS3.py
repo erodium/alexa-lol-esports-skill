@@ -1,5 +1,7 @@
 import updateS3bucket
 from pprint import pprint
+from datetime import datetime
 
-resp=updateS3bucket.lambda_handler(0,0)
-pprint(resp)
+dtg = datetime.utcnow().strftime("%Y-%m-%d")
+event = {"time":dtg}
+resp=updateS3bucket.lambda_handler(event,0)

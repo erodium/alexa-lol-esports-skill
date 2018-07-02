@@ -4,7 +4,6 @@ from datetime import datetime
 import requests
 import pytz
 from pytz import timezone
-import logging
 
 NA_TOURN_ID="8531db79-ade3-4294-ae4a-ef639967c393" #should go away when this supports multiple tournaments
 NA_LCS_TEAMS = [
@@ -22,7 +21,7 @@ NA_LCS_TEAMS = [
 UPDATED_AT_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
 SCHEDULED_TIME_FORMAT = "%Y-%m-%dT%H:%M:%S.%f"
 
-ITEM_TEMPLATE= {"updatedAt":"","slug":"","nextMatch":""}
+ITEM_TEMPLATE= {"nextMatchUTC":"","slug":"","nextMatchPDT":"","id":""}
 DYNAMODB_TABLE_NAME="teams_na-lcs-id"
 
 dynamodb = boto3.resource('dynamodb')
@@ -30,12 +29,9 @@ table = dynamodb.Table(DYNAMODB_TABLE_NAME)
 
 
 def lambda_handler(event, context):
-    logger = logging.getLogger()
-    logger.setLevel(level=logging.INFO)
     print("Update requested at " + event['time'])
     overallStatus = 0
     for team in NA_LCS_TEAMS:
-        logger.info("starting %s", team['slug'])
         APIteamData = getTeam(team['slug'], NA_TOURN_ID)
         APInextScheduledItem = APIteamData['scheduleItems'][0]
         APIteams = APIteamData['teams']
@@ -43,33 +39,32 @@ def lambda_handler(event, context):
         APInsiTimeStr = APInextScheduledItem['scheduledTime'][:-5]
         DBteamData = table.get_item(Key={"id":team['id']})
         if 'Item' in DBteamData:
-            DBnextMatchTimeStr = DBteamData['Item']['nextMatch']
+            DBnextMatchTimeStr = DBteamData['Item']['nextMatchUTC']
             if dataHasBeenUpdated(APInsiTimeStr,DBnextMatchTimeStr):
-                logger.info("Updating %s from %s to %s", team['slug'], APInsiTimeStr, DBnextMatchTimeStr)
                 pdt = timezone('US/Pacific')
                 APInsiDTO = datetime.strptime(APInsiTimeStr, SCHEDULED_TIME_FORMAT)
                 utc_dt = pytz.utc.localize(APInsiDTO)
                 pdt_dt = utc_dt.astimezone(pdt)
                 pdtNSIstr = pdt_dt.strftime(SCHEDULED_TIME_FORMAT)
-                updateExpression = "SET nextMatch = :m"
-                expressionAttributeValue = {":m": pdtNSIstr}
+                updateExpression = "SET nextMatchUTC = :m, nextMatchPDT = :p"
+                expressionAttributeValue = {":m": pdtNSIstr, ":p": APInsiTimeStr}
                 table.update_item(Key={"id":team['id']},UpdateExpression=updateExpression,ExpressionAttributeValues=expressionAttributeValue)
-                print(team['slug'])
+                print("Updated " + team['slug'] + " from " + APInsiTimeStr + " to " + DBnextMatchTimeStr)
             else:
-                logger.info("No changes made to %s", team['slug'])
+                print("No changes made to " + team['slug'])
         else:
-            logger.info("No item found for %s; creating", team['slug'])
             newItem = ITEM_TEMPLATE.copy()
             newItem['id']=APIcurrentTeam['id']
-            newItem['updatedAt'] = APIcurrentTeam['updatedAt']
+            newItem['nextMatchUTC'] = APInsiTimeStr
             newItem['slug'] = APIcurrentTeam['slug']
             pdt = timezone('US/Pacific')
             APInsiDTO = datetime.strptime(APInextScheduledItem['scheduledTime'][:-5],SCHEDULED_TIME_FORMAT)
             utc_dt = pytz.utc.localize(APInsiDTO)
             pdt_dt = utc_dt.astimezone(pdt)
             pdtNSIstr = pdt_dt.strftime(SCHEDULED_TIME_FORMAT)
-            newItem['nextMatch'] = pdtNSIstr
+            newItem['nextMatchPDT'] = pdtNSIstr
             table.put_item(Item=newItem)
+            print("No item found for " + team['slug'] + "; created.")
     return(overallStatus)
 
 
