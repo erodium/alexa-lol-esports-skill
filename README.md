@@ -15,6 +15,7 @@ Expected features/roadmap:
 5. Develop Lambda function to pull API data weekly and update Dynamo DB.
 -- It turns out that Riot doesn't update the team "nextScheduled" field after the game, so I'm unable to use that as a
 -- field. Instead, I will just check if the next match is scheduled for before today, and if so, move to the next scheduled item.
+--DONE
 6. Ask Alexa when EU LCS teams play for 2018 Summer Split only.
 7. Have Alexa give match time in local time zone.
 8. Ask Alexa when all region teams play for 2018 summer split only.

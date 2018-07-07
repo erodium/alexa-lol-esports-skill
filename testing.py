@@ -73,7 +73,7 @@ alexa_event = {
 	}
 }
 
-import getESportsMatchTime
+import getLCSMatchTime
 from pprint import pprint
 
-pprint(getESportsMatchTime.lambda_handler(alexa_event,0))
+pprint(getLCSMatchTime.lambda_handler(alexa_event, 0))
