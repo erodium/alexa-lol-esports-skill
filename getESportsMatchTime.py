@@ -18,7 +18,7 @@ def lambda_handler(event, context):
     elif event["request"]["type"] == "IntentRequest":
         return on_intent(event["request"], event["session"])
     elif event["request"]["type"] == "SessionEndedRequest":
-        return on_session_ended(event["request"], event["session"])
+        print("Session Ended.")
 
 def on_session_started(session_started_request, session):
     print("Starting new session.")
@@ -47,7 +47,7 @@ def get_match_response(team_id_str):
     team_id = int(team_id_str)
     DBitemData = table.get_item(Key={"id": team_id})
     DBteamData = DBitemData['Item']
-    DBdateTime = datetime.strptime(DBteamData['nextMatch'], SCHEDULED_TIME_FORMAT)
+    DBdateTime = datetime.strptime(DBteamData['nextMatchPDT'], SCHEDULED_TIME_FORMAT)
     if DBdateTime.hour < 12:
         timeHour = DBdateTime.hour
         dayTime = " A.M."
