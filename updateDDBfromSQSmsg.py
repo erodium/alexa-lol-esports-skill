@@ -50,7 +50,7 @@ table = dynamodb.Table(DYNAMODB_TABLE_NAME)
 sqs = boto3.resource('sqs')
 queue  = sqs.get_queue_by_name(QueueName=SQS_QUEUE_NAME)
 
-
+#for each SQS message received, pull updated data from LOLeSports API and update the database
 def lambda_handler(event, context):
     overallStatus = 0
     message = event['Records'][0]
@@ -84,7 +84,8 @@ def lambda_handler(event, context):
         print("No item found for " + slug + "; created.")
     return(overallStatus)
 
-
+#determine whether the API returns updated or stale data;
+#returns TRUE if data is new, FALSE if data is stale
 def dataHasBeenUpdated(APIupdatedAtStr, DBupdatedAtStr):
     TimeAPIupdated = datetime.strptime(APIupdatedAtStr, SCHEDULED_TIME_FORMAT)
     TimeDBupdated = datetime.strptime(DBupdatedAtStr, SCHEDULED_TIME_FORMAT)
@@ -92,7 +93,7 @@ def dataHasBeenUpdated(APIupdatedAtStr, DBupdatedAtStr):
         return True
     return False
 
-
+#get the team's data from the API
 def getTeam(slug, tournamentId):
     r = requests.get("https://api.lolesports.com/api/v1/teams?slug=" + str(slug) + "&tournament=" + str(tournamentId)).json()
     return r

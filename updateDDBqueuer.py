@@ -34,9 +34,11 @@ LEAGUES= [
 
 SQS_QUEUE_NAME = 'eSportsTeamQueue'
 
+#set connections to AWS resources
 sqs = boto3.resource('sqs')
 queue  = sqs.get_queue_by_name(QueueName=SQS_QUEUE_NAME)
 
+#for each team in each league above, create an SQS message to update match times
 def lambda_handler(event, context):
     messages = []
     message = {}
